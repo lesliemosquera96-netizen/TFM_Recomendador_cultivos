@@ -126,24 +126,57 @@ SOIL_VARIABLES_DICT = {
         "description": "Profundidad máxima que pueden alcanzar las raíces sin restricciones."
     }
 }
+HIST_CLIM_VARS = {
+    "ppt":  {
+        "name":"Precipitacion Anual",   
+        "unit":"mm",
+        "description": "Suma total de lluvia acumulada en el año."
+    },
+    "tmean": {
+        "name": "Temperatura Media",
+        "unit": "°C",
+        "description": "Promedio anual de la temperatura media diaria"
+    },
+    "tmax": { 
+        "name" :"Temperatura Maxima Media",
+        "unit": "°C",
+        "description": "Promedio anual de la temperatura máxima"
+    },
+    "tmin":  {
+        "name":"Temperatura Minima Media", 
+        "unit": "°C",
+        "description": "Promedio anual de la temperatura mínima"
+    },
+    "vpdmax": {
+        "name":"VPD Maximo",
+        "unit":"hPa",
+        "description": "déficit máximo de presión de vapor"
+    },
+    "vpdmin": {
+        "name":"VPD Minimo", 
+        "unit":"hPa",
+        "description": "déficit mínimo de presión de vapor"
+    }
+}
 
-CLIMATE_VARIABLES_DICT = {
+
+FUT_CLIM_VARS = {
     "pr": {
         "name": "Precipitación Anual Total",
         "unit": "mm",
         "description": "Suma total de lluvia acumulada en el año."
     },
-    "tas": {
+    "tmean": {
         "name": "Temperatura Media Anual",
         "unit": "°C",
         "description": "Promedio diario de la temperatura del aire."
     },
-    "tasmax": {
+    "tmax": {
         "name": "Temperatura Máxima Media",
         "unit": "°C",
         "description": "Promedio de las temperaturas máximas diarias."
     },
-    "tasmin": {
+    "tmin": {
         "name": "Temperatura Mínima Media",
         "unit": "°C",
         "description": "Promedio de las temperaturas mínimas diarias."
