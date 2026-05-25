@@ -119,4 +119,4 @@ class CDLExtractor:
             for i in range(0, len(data), batch_size):
                 batch = data[i:i + batch_size]
                 collection.insert_many(batch)
-            print(f"¡Carga de {self.year} completada con éxito!")
+            print(f"¡Carga de {self.year} completada con éxito")
