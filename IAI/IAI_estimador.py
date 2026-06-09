@@ -95,21 +95,14 @@ CROP_AGRONOMIC_SETTINGS = {
         "awc_opt": 0.12
     },
     24: {
-        "name": "Winter Wheat", "t_base": 0.0,
+        "name": "Wheat", "t_base": 0.0,
         "t_range": (5.0, 15.0, 23.0, 27.0),
         "p_range": (300.0, 750.0, 900.0, 1600.0),
         "ph_range": (5.5, 6.0, 7.0, 8.5),
         "depth_range": (20.0, 50.0, 150.0, 300.0),
         "awc_opt": 0.12
     },
-    22: {
-        "name": "Durum Wheat", "t_base": 4.0, # Mapeo usando los mismos umbrales biofísicos
-        "t_range": (5.0, 15.0, 23.0, 27.0),
-        "p_range": (300.0, 750.0, 900.0, 1600.0),
-        "ph_range": (5.5, 6.0, 7.0, 8.5),
-        "depth_range": (20.0, 50.0, 150.0, 300.0),
-        "awc_opt": 0.12
-    }
+    
 }
 
 # Funciones de estimación del idice de idoneidad agroclimatica
@@ -132,43 +125,38 @@ def build_trapezoidal_expr(col_name: str, limits: tuple) -> pl.Expr:
         .otherwise(0.0)
     )
 
-def calculate_iai(df: pl.DataFrame) -> pl.DataFrame:
-    """
-    Ejecuta el cálculo paralelo del IAI unificado (Pasado e Inferencia Futura)
-    siguiendo la ecuación ponderada: IAI = 0.30*GDD + 0.25*Temp + 0.25*Precip + 0.20*Suelo
-    """
-   
-    # Selectores inteligentes de columnas según el escenario estructural del df
-    t_max_col = "tmax_245" if "tmax_245" in df.columns else "tmax"
-    t_min_col = "tmin_245" if "tmin_245" in df.columns else "tmin"
-    p_total_col = "pr_245" if "pr_245" in df.columns else "pr"
-    t_mean_col = "tmean_245" if "tmean_245" in df.columns else "tmean"
-
-    # Inicializar casos condicionales
+def calculate_iai(df):
+    # 1. Inicialización limpia de las condiciones lógicas
     gdd_cases = pl.when(False).then(0.0)
     i_temp_cases = pl.when(False).then(0.0)
     i_precip_cases = pl.when(False).then(0.0)
     i_suelo_cases = pl.when(False).then(0.0)
 
+    # Nombres de las columnas climáticas de tu dataset
+    t_max_col = "tmax"
+    p_total_col = "ppt"
+
+    # 2. Bucle de asignación agronómica
     for crop_id, params in CROP_AGRONOMIC_SETTINGS.items():
-        # Growing Degree Days (I_GDD) 
+        
+        # --- Grados Día (I_GDD) | Proxy Verano (200 días) ---
         gdd_calc = (
-            pl.when(((pl.col(t_max_col) + pl.col(t_min_col)) / 2 - params["t_base"]) > 0)
-            .then(((pl.col(t_max_col) + pl.col(t_min_col)) / 2 - params["t_base"]) * 365)
+            pl.when((pl.col(t_max_col) - params["t_base"]) > 0)
+            .then((pl.col(t_max_col) - params["t_base"]) * 200)
             .otherwise(0.0)
         )
         i_gdd_norm = pl.when(gdd_calc > 2500).then(1.0).otherwise(gdd_calc / 2500)
         gdd_cases = gdd_cases.when(pl.col("crop_id") == crop_id).then(i_gdd_norm)
 
-        #Temperatura Estacional (I_temp)
-        t_trap = build_trapezoidal_expr(t_mean_col, params["t_range"])
+        # --- Temperatura Estacional (I_temp) | Proxy tmax ---
+        t_trap = build_trapezoidal_expr(t_max_col, params["t_range"])
         i_temp_cases = i_temp_cases.when(pl.col("crop_id") == crop_id).then(t_trap)
 
-        # Precipitación Acumulada (I_precip) ---
+        # --- Precipitación (I_precip) | Se calcula pero no pesa en Opción B ---
         p_trap = build_trapezoidal_expr(p_total_col, params["p_range"])
         i_precip_cases = i_precip_cases.when(pl.col("crop_id") == crop_id).then(p_trap)
 
-        # Componente Edáfica Unificada (I_suelo) ---
+        # --- Suelo (I_suelo) ---
         ph_trap = build_trapezoidal_expr("ph1to1h2o_r", params["ph_range"])
         depth_trap = build_trapezoidal_expr("profundidad_efectiva_cm", params["depth_range"])
         awc_norm = pl.when(pl.col("awc_r") >= params["awc_opt"]).then(1.0).otherwise(pl.col("awc_r") / params["awc_opt"])
@@ -176,7 +164,7 @@ def calculate_iai(df: pl.DataFrame) -> pl.DataFrame:
         suelo_avg = (ph_trap + depth_trap + awc_norm) / 3.0
         i_suelo_cases = i_suelo_cases.when(pl.col("crop_id") == crop_id).then(suelo_avg)
 
-    # Consolidar cierres de casos
+    # 3. Consolidación de sub-índices en el DataFrame
     df_with_indices = df.with_columns([
         gdd_cases.otherwise(0.0).alias("I_GDD"),
         i_temp_cases.otherwise(0.0).alias("I_temp"),
@@ -184,7 +172,7 @@ def calculate_iai(df: pl.DataFrame) -> pl.DataFrame:
         i_suelo_cases.otherwise(0.0).alias("I_suelo")
     ])
 
-    # Ecuación Ponderada
+    # 4. ECUACIÓN FINAL (Opción B: Riego Californiano 40/40/20)
     df_final = df_with_indices.with_columns([
         (
             (pl.col("I_GDD") * 0.30) +
@@ -195,3 +183,6 @@ def calculate_iai(df: pl.DataFrame) -> pl.DataFrame:
     ])
 
     return df_final
+
+
+  
