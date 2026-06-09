@@ -6,3 +6,9 @@ __pycache__/
 NASA_data/
 chromedriver.exe
 .env
+
+Data/
+*.csv
+*.parquet
+*.db
+*.xlsx
