@@ -8,8 +8,9 @@ TARGET_CROPS = {
     239: "Dbl Crop Soybeans/Cotton"
 }
 
+
 # IDs a excluir (No agrícolas / Ruido)
-EXCLUDED_IDS = {0, 71,37,70,111, 121, 122,62, 123, 124, 131, 141, 142, 143, 152, 176, 190, 195}
+EXCLUDED_IDS = {0,111, 121, 122,62, 123, 124, 131, 141, 142, 143, 152, 176, 190, 195}
 
 ## Diccionario de todos los cultivos
 
@@ -186,4 +187,11 @@ FUT_CLIM_VARS = {
         "unit": "%",
         "description": "Promedio de humedad relativa en la superficie."
     }
+}
+
+# Cultivos finalmente elegidos
+FINAL_CROPS = {
+    75: "Almonds", 69: "Grapes", 204: "Pistachios", 76: "Walnuts", 
+    54: "Tomatoes", 3: "Rice", 2: "Cotton", 227: "Lettuce", 
+    221: "Strawberries", 212: "Oranges", 36: "Alfalfa", 24: "Wheat"
 }
