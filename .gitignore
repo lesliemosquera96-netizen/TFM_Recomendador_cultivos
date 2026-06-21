@@ -12,3 +12,5 @@ Data/
 *.parquet
 *.db
 *.xlsx
+
+modelos/
