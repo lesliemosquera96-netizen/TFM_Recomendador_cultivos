@@ -1,0 +1,25 @@
+{
+  "k": 5,
+  "seed": 42,
+  "vars_cluster": [
+    "tmax",
+    "tmin",
+    "ppt",
+    "vpdmax",
+    "vpdmin",
+    "ph1to1h2o_r",
+    "awc_r",
+    "claytotal_r",
+    "dbthirdbar_r",
+    "sandtotal_r",
+    "silttotal_r"
+  ],
+  "etiquetas": {
+    "0": "Monta\u00f1a / clima fr\u00edo",
+    "1": "Zona templada h\u00fameda",
+    "2": "Valle c\u00e1lido \u2014 suelo arenoso",
+    "3": "Valle c\u00e1lido \u2014 suelo arcilloso",
+    "4": "Desierto \u00e1rido"
+  },
+  "reorden_por": "tmax_creciente"
+}

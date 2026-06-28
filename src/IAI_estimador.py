@@ -132,39 +132,54 @@ def calculate_iai(df):
     i_precip_cases = pl.when(False).then(0.0)
     i_suelo_cases = pl.when(False).then(0.0)
 
-    # Nombres de las columnas climáticas de tu dataset
+    # Columnas climáticas del dataset
     t_max_col = "tmax"
+    t_min_col = "tmin"
     p_total_col = "ppt"
+
+    # Duración del período de crecimiento (proxy, en días)
+    DIAS_TEMPORADA = 200
+    UMBRAL_GDD = 2500  # GDD de referencia para normalizar a [0,1]
 
     # 2. Bucle de asignación agronómica
     for crop_id, params in CROP_AGRONOMIC_SETTINGS.items():
-        
-        # --- Grados Día (I_GDD) | Proxy Verano (200 días) ---
+
+        # --- Grados-Día de Crecimiento (I_GDD) ---
+        # Adaptación FAO a resolución anual: se asume una temperatura media
+        # representativa constante, aproximada como (Tmax + Tmin) / 2,
+        # multiplicada por la duración de la temporada de crecimiento.
+        t_media = (pl.col(t_max_col) + pl.col(t_min_col)) / 2.0
+
         gdd_calc = (
-            pl.when((pl.col(t_max_col) - params["t_base"]) > 0)
-            .then((pl.col(t_max_col) - params["t_base"]) * 200)
+            pl.when((t_media - params["t_base"]) > 0)
+            .then((t_media - params["t_base"]) * DIAS_TEMPORADA)
             .otherwise(0.0)
         )
-        i_gdd_norm = pl.when(gdd_calc > 2500).then(1.0).otherwise(gdd_calc / 2500)
+        i_gdd_norm = (
+            pl.when(gdd_calc > UMBRAL_GDD).then(1.0)
+            .otherwise(gdd_calc / UMBRAL_GDD)
+        )
         gdd_cases = gdd_cases.when(pl.col("crop_id") == crop_id).then(i_gdd_norm)
 
-        # --- Temperatura Estacional (I_temp) | Proxy tmax ---
+        # --- Temperatura Estacional (I_temp) | función trapezoidal sobre tmax ---
         t_trap = build_trapezoidal_expr(t_max_col, params["t_range"])
         i_temp_cases = i_temp_cases.when(pl.col("crop_id") == crop_id).then(t_trap)
 
-        # --- Precipitación (I_precip) | Se calcula pero no pesa en Opción B ---
+        # --- Precipitación (I_precip) | función trapezoidal sobre ppt ---
         p_trap = build_trapezoidal_expr(p_total_col, params["p_range"])
         i_precip_cases = i_precip_cases.when(pl.col("crop_id") == crop_id).then(p_trap)
 
-        # --- Suelo (I_suelo) ---
+        # --- Suelo (I_suelo) | promedio de pH, profundidad y AWC ---
         ph_trap = build_trapezoidal_expr("ph1to1h2o_r", params["ph_range"])
         depth_trap = build_trapezoidal_expr("profundidad_efectiva_cm", params["depth_range"])
-        awc_norm = pl.when(pl.col("awc_r") >= params["awc_opt"]).then(1.0).otherwise(pl.col("awc_r") / params["awc_opt"])
-        
+        awc_norm = (
+            pl.when(pl.col("awc_r") >= params["awc_opt"]).then(1.0)
+            .otherwise(pl.col("awc_r") / params["awc_opt"])
+        )
         suelo_avg = (ph_trap + depth_trap + awc_norm) / 3.0
         i_suelo_cases = i_suelo_cases.when(pl.col("crop_id") == crop_id).then(suelo_avg)
 
-    # 3. Consolidación de sub-índices en el DataFrame
+    # 3. Consolidación de sub-índices
     df_with_indices = df.with_columns([
         gdd_cases.otherwise(0.0).alias("I_GDD"),
         i_temp_cases.otherwise(0.0).alias("I_temp"),
@@ -172,17 +187,14 @@ def calculate_iai(df):
         i_suelo_cases.otherwise(0.0).alias("I_suelo")
     ])
 
-    # 4. ECUACIÓN FINAL (Opción B: Riego Californiano 40/40/20)
+    # 4. Ecuación final del IAI (suma ponderada)
     df_final = df_with_indices.with_columns([
         (
-            (pl.col("I_GDD") * 0.30) +
-            (pl.col("I_temp") * 0.25) +
+            (pl.col("I_GDD")    * 0.30) +
+            (pl.col("I_temp")   * 0.25) +
             (pl.col("I_precip") * 0.25) +
-            (pl.col("I_suelo") * 0.20)
+            (pl.col("I_suelo")  * 0.20)
         ).alias("IAI")
     ])
 
     return df_final
-
-
-  
