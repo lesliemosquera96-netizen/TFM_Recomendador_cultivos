@@ -8,20 +8,19 @@ chromedriver.exe
 .env
 
 # ── Datos originales pesados (NO subir; la app usa los parquet ligeros) ──
-Data/*.gdb/
-data_clean/
-df_cluster_k3/
-df_cluster/
-fut_clean/
-hist_clean/
-hist_iai_v2/
-hist_iai_v3/
-histt_iai/
-iai_2025_predicho_v3/
-iai_futuro_predicho_v3/
-iai_futuro_predicho/
-mapa_idoneidad_final/
-raw_data/
+Data/raw_data.parquet
+Data/data_clean.parquet
+Data/df_cluster.parquet
+Data/df_cluster_k3.parquet
+Data/fut_clean.parquet
+Data/hist_clean.parquet
+Data/hist_iai.parquet
+Data/hist_iai_v2.parquet
+Data/hist_iai_v3.parquet
+Data/iai_2025_predicho_v3.parquet
+Data/iai_futuro_predicho.parquet
+Data/iai_futuro_predicho_v3.parquet
+Data/mapa_idoneidad_final.parquet
 
 modelos/
 # ── Modelos pesados que NO usa la app (NO subir) ──
