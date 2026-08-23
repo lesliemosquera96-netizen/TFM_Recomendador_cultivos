@@ -1,0 +1,12 @@
+[theme]
+# Tema claro con acentos verdes, evita el problema de texto blanco sobre blanco
+base = "light"
+primaryColor = "#1D9E75"
+backgroundColor = "#F4F9F4"
+secondaryBackgroundColor = "#E4EFE4"
+textColor = "#1A3A2A"
+font = "sans serif"
+
+[server]
+# Útil para el despliegue
+headless = true
