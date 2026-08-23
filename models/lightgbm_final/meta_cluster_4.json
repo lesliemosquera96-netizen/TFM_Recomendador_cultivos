@@ -1,0 +1,17 @@
+{
+  "cluster": 4,
+  "etiqueta": "Desierto árido",
+  "tipo": "LightGBM",
+  "trial": 4,
+  "params": {
+    "n_estimators": 300,
+    "max_depth": 4,
+    "learning_rate": 0.1,
+    "subsample": 0.8938246313172393,
+    "colsample_bytree": 0.8855856788207566,
+    "reg_alpha": 0.04263506100183106,
+    "reg_lambda": 0.002579960817389274,
+    "random_state": 42,
+    "n_jobs": -1
+  }
+}

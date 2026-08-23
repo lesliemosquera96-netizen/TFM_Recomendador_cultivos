@@ -1,0 +1,22 @@
+[
+  "tmax",
+  "tmin",
+  "ppt",
+  "ph1to1h2o_r",
+  "awc_r",
+  "profundidad_efectiva_cm",
+  "claytotal_r",
+  "dbthirdbar_r",
+  "sandtotal_r",
+  "silttotal_r",
+  "crop_name_Alfalfa",
+  "crop_name_Almonds",
+  "crop_name_Cotton",
+  "crop_name_Grapes",
+  "crop_name_Lettuce",
+  "crop_name_Oranges",
+  "crop_name_Pistachios",
+  "crop_name_Strawberries",
+  "crop_name_Tomatoes",
+  "crop_name_Wheat"
+]

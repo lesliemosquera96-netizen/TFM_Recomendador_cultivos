@@ -1,0 +1,17 @@
+{
+  "cluster": 3,
+  "etiqueta": "Valle cálido — suelo arcilloso",
+  "tipo": "LightGBM",
+  "trial": 15,
+  "params": {
+    "n_estimators": 500,
+    "max_depth": 6,
+    "learning_rate": 0.1,
+    "subsample": 0.851476051501374,
+    "colsample_bytree": 0.895581213224843,
+    "reg_alpha": 0.0011084792974572393,
+    "reg_lambda": 0.14180609938786667,
+    "random_state": 42,
+    "n_jobs": -1
+  }
+}

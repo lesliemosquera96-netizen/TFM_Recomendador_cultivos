@@ -1,0 +1,17 @@
+{
+  "cluster": 0,
+  "etiqueta": "Montaña / clima frío",
+  "tipo": "LightGBM",
+  "trial": 0,
+  "params": {
+    "n_estimators": 500,
+    "max_depth": 10,
+    "learning_rate": 0.01,
+    "subsample": 0.9372593063828516,
+    "colsample_bytree": 0.8808568392872715,
+    "reg_alpha": 0.09242303630346307,
+    "reg_lambda": 0.25840701801439175,
+    "random_state": 42,
+    "n_jobs": -1
+  }
+}

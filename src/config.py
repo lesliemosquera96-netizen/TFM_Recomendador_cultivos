@@ -25,3 +25,16 @@ SAMPLES_PER_YEAR = 55556
 
 # Rango de años para el procesamiento (range en Python no incluye el último número)
 YEARS_TO_PROCESS = range(2008, 2025)
+
+# config.py
+# Configuración del proyecto. NO subir a GitHub (añadir a .gitignore).
+
+# ── API keys ──
+NASS_API_KEY = "005A01E4-CE47-34C8-AD69-D117DD10811D"
+
+# ── URLs ──
+NASS_BASE_URL = "https://quickstats.nass.usda.gov/api/api_GET/"
+
+# ── Rutas de datos (opcional, para centralizar) ──
+RUTA_DATOS = "../Data"
+RUTA_MODELOS = "../models"
