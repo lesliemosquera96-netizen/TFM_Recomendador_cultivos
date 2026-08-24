@@ -46,8 +46,7 @@ def precalcular():
 
     # 1. Asignar cluster a todos los puntos de una vez
     X_cluster = completos.select(VARS_CLUSTER).to_numpy()
-    predictor.kmeans.cluster_centers_ = predictor.kmeans.cluster_centers_.astype(np.float64)
-    X_cluster_sc = predictor.scaler.transform(X_cluster).astype(np.float64)
+    X_cluster_sc = predictor.scaler.transform(X_cluster)
     clusters = predictor.kmeans.predict(X_cluster_sc)
     completos = completos.with_columns(pl.Series("cluster", clusters))
 
@@ -55,17 +54,22 @@ def precalcular():
     #    presente, y futuro promediado por escenario
     escenarios = {
         "presente": {
+    # Escenarios: presente (2025) + cada año/escenario por separado
+    escenarios = {
+        "2025": {
             "tmax": "tmax", "tmin": "tmin", "ppt": "ppt",
         },
-        "SSP2-4.5": {
-            "tmax": ["tmax_245_2030", "tmax_245_2040"],
-            "tmin": ["tmin_245_2030", "tmin_245_2040"],
-            "ppt":  ["pr_245_2030", "pr_245_2040"],
+        "2030 · SSP2-4.5": {
+            "tmax": "tmax_245_2030", "tmin": "tmin_245_2030", "ppt": "pr_245_2030",
         },
-        "SSP5-8.5": {
-            "tmax": ["tmax_585_2030", "tmax_585_2040"],
-            "tmin": ["tmin_585_2030", "tmin_585_2040"],
-            "ppt":  ["pr_585_2030", "pr_585_2040"],
+        "2040 · SSP2-4.5": {
+            "tmax": "tmax_245_2040", "tmin": "tmin_245_2040", "ppt": "pr_245_2040",
+        },
+        "2030 · SSP5-8.5": {
+            "tmax": "tmax_585_2030", "tmin": "tmin_585_2030", "ppt": "pr_585_2030",
+        },
+        "2040 · SSP5-8.5": {
+            "tmax": "tmax_585_2040", "tmin": "tmin_585_2040", "ppt": "pr_585_2040",
         },
     }
 
@@ -78,17 +82,10 @@ def precalcular():
     for esc_nombre, mapeo in escenarios.items():
         print(f"\nProcesando escenario: {esc_nombre}")
 
-        # Construir el clima de este escenario (promediando años si es futuro)
+        # Construir el clima de este escenario (cada año por separado)
         df_esc = completos.clone()
         for var in ["tmax", "tmin", "ppt"]:
-            fuente = mapeo[var]
-            if isinstance(fuente, str):
-                df_esc = df_esc.with_columns(pl.col(fuente).alias(f"_{var}"))
-            else:
-                # promedio de los dos años
-                df_esc = df_esc.with_columns(
-                    ((pl.col(fuente[0]) + pl.col(fuente[1])) / 2).alias(f"_{var}")
-                )
+            df_esc = df_esc.with_columns(pl.col(mapeo[var]).alias(f"_{var}"))
 
         # Procesar por cluster (cada cluster usa su modelo y sus features)
         for c in range(5):
