@@ -273,29 +273,54 @@ with tab2:
                 f"{datos_mapa['iai'].mean():.2f} · "
                 f"{len(datos_mapa):,} puntos")
 
-    # Mapa coroplético con puntos coloreados por IAI
-    import branca.colormap as cm
-    colormap = cm.LinearColormap(
-        colors=["#D85A30", "#FAC775", "#9FE1CB", "#1D9E75", "#0F6E56"],
-        vmin=0, vmax=1, caption="Índice de Idoneidad Agrícola (IAI)"
+    # ── Color por IAI: de rojo (baja) a verde (alta) ──
+    def iai_a_color(v):
+        # v en [0,1]. Interpolar rojo -> amarillo -> verde.
+        if v < 0.5:
+            t = v / 0.5
+            r = int(216 + (250-216)*t)
+            g = int(90 + (199-90)*t)
+            b = int(48 + (117-48)*t)
+        else:
+            t = (v - 0.5) / 0.5
+            r = int(250 + (15-250)*t)
+            g = int(199 + (110-199)*t)
+            b = int(117 + (86-117)*t)
+        return [r, g, b]
+
+    datos_mapa[["r", "g", "b"]] = datos_mapa["iai"].apply(
+        lambda v: pd.Series(iai_a_color(v)))
+
+    # ── Mapa con pydeck (renderiza miles de puntos de forma nativa) ──
+    import pydeck as pdk
+
+    capa = pdk.Layer(
+        "ScatterplotLayer",
+        data=datos_mapa,
+        get_position=["lon", "lat"],
+        get_fill_color=["r", "g", "b", 180],
+        get_radius=2500,          # radio en metros
+        pickable=True,
     )
 
-    m2 = folium.Map(location=[37.2, -119.5], zoom_start=6, tiles="CartoDB positron")
+    vista = pdk.ViewState(latitude=37.2, longitude=-119.5, zoom=5.2)
 
-    # Pintar los puntos (usar CircleMarker ligero)
-    for _, row in datos_mapa.iterrows():
-        folium.CircleMarker(
-            location=[row["lat"], row["lon"]],
-            radius=3,
-            color=None,
-            fill=True,
-            fill_color=colormap(row["iai"]),
-            fill_opacity=0.7,
-            weight=0,
-        ).add_to(m2)
+    st.pydeck_chart(pdk.Deck(
+        layers=[capa],
+        initial_view_state=vista,
+        map_style="light",
+        tooltip={"text": "IAI: {iai}"},
+    ))
 
-    colormap.add_to(m2)
-    st_folium(m2, height=500, width=None, key="mapa_coropletico")
+    # Leyenda de color
+    st.markdown("""
+    <div style="display:flex; align-items:center; gap:8px; font-size:13px; color:#5F7A5F;">
+      <span>Baja idoneidad</span>
+      <div style="flex:1; height:12px; border-radius:6px; max-width:300px;
+                  background:linear-gradient(to right,#D85A30,#FAC775,#0F6E56);"></div>
+      <span>Alta idoneidad</span>
+    </div>
+    """, unsafe_allow_html=True)
 
 
 # ══════════════════════════════════════════════════════════════════
