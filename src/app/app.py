@@ -94,13 +94,13 @@ def punto_mas_cercano(lon, lat):
 
 def color_iai(v):
     """IAI [0,1] -> color RGB (rojo->amarillo->verde)."""
+    if v is None or (isinstance(v, float) and np.isnan(v)):
+        return [200, 200, 200]  # gris para valores faltantes
     if v < 0.5:
         t = v / 0.5
         return [int(216+(250-216)*t), int(90+(199-90)*t), int(48+(117-48)*t)]
     t = (v - 0.5) / 0.5
-    return [int(250+(15-250)*t), int(199+(110-199)*t), int(117+(86-117)*t)]
-
-
+    return [int(250+(15-250)*t), int(199+(110-199)*t), int(86+(86-117)*t)]
 # ══════════════════════════════════════════════════════════════════
 #  BARRA LATERAL
 # ══════════════════════════════════════════════════════════════════
@@ -306,8 +306,8 @@ with tab2:
     e2.metric("Zonas muy aptas (>0.7)", f"{(datos_mapa['iai']>0.7).mean()*100:.0f}%")
     e3.metric("Puntos evaluados", f"{len(datos_mapa):,}")
 
-    datos_mapa[["r", "g", "b"]] = datos_mapa["iai"].apply(
-        lambda v: pd.Series(color_iai(v)))
+   colores_rgb = datos_mapa["iai"].apply(color_iai)
+   datos_mapa[["r", "g", "b"]] = pd.DataFrame(colores_rgb.tolist(), index=datos_mapa.index)
 
     capa = pdk.Layer(
         "ScatterplotLayer", data=datos_mapa,
