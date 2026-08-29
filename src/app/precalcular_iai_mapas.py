@@ -3,8 +3,9 @@
  PRECÁLCULO DEL IAI PARA LOS MAPAS COROPLÉTICOS
 ================================================================================
 Recorre toda la base de California y calcula el IAI de los 12 cultivos para
-cada punto, en presente (2025) y futuro (SSP2-4.5 y SSP5-8.5, promediando
-2030 y 2040). Guarda el resultado en formato largo para pintar los mapas.
+cada punto, en el presente (2025) y en los escenarios futuros por año
+(2030 y 2040, para SSP2-4.5 y SSP5-8.5). Guarda el resultado en formato largo
+para pintar los mapas.
 
 Reutiliza el motor de predicción (predictor.py). Se ejecuta una sola vez;
 la app luego solo lee el resultado.
@@ -17,7 +18,6 @@ Formato de salida (largo): una fila por punto × cultivo × escenario
 import os
 import numpy as np
 import polars as pl
-from tqdm import tqdm
 
 from predictor import (
     PredictorCultivos, VARS_CLUSTER, FINAL_CROPS,
@@ -40,21 +40,15 @@ def precalcular():
     completos = base.filter(pl.col("datos_completos") == True)
     print(f"Puntos a procesar: {completos.height:,}")
 
-    # ── Preparar las matrices de forma vectorizada ──
-    # En vez de punto por punto (lento), procesamos por bloques con numpy.
-    # Pero como cada punto puede caer en un cluster distinto, agrupamos por cluster.
-
     # 1. Asignar cluster a todos los puntos de una vez
-    X_cluster = completos.select(VARS_CLUSTER).to_numpy()
-    X_cluster_sc = predictor.scaler.transform(X_cluster)
+    #    (forzar float64 para evitar el "Buffer dtype mismatch" de K-Means)
+    X_cluster = completos.select(VARS_CLUSTER).to_numpy().astype(np.float64)
+    X_cluster_sc = predictor.scaler.transform(X_cluster).astype(np.float64)
+    predictor.kmeans.cluster_centers_ = predictor.kmeans.cluster_centers_.astype(np.float64)
     clusters = predictor.kmeans.predict(X_cluster_sc)
     completos = completos.with_columns(pl.Series("cluster", clusters))
 
-    # 2. Definir los escenarios climáticos a evaluar
-    #    presente, y futuro promediado por escenario
-    escenarios = {
-        "presente": {
-    # Escenarios: presente (2025) + cada año/escenario por separado
+    # 2. Escenarios: presente (2025) + cada año y escenario por separado
     escenarios = {
         "2025": {
             "tmax": "tmax", "tmin": "tmin", "ppt": "ppt",
@@ -72,8 +66,6 @@ def precalcular():
             "tmax": "tmax_585_2040", "tmin": "tmin_585_2040", "ppt": "pr_585_2040",
         },
     }
-    }
-    }
 
     # Variables de suelo (comunes a todos los escenarios)
     vars_suelo = ["ph1to1h2o_r", "awc_r", "profundidad_efectiva_cm",
@@ -82,9 +74,9 @@ def precalcular():
     filas = []
 
     for esc_nombre, mapeo in escenarios.items():
-        print(f"\nProcesando escenario: {esc_nombre}")
+        print(f"Procesando escenario: {esc_nombre}")
 
-        # Construir el clima de este escenario (cada año por separado)
+        # Construir el clima de este escenario
         df_esc = completos.clone()
         for var in ["tmax", "tmin", "ppt"]:
             df_esc = df_esc.with_columns(pl.col(mapeo[var]).alias(f"_{var}"))
@@ -111,7 +103,7 @@ def precalcular():
             lon = sub["lon"].to_numpy()
             lat = sub["lat"].to_numpy()
 
-            # Para cada cultivo, construir X y predecir (vectorizado sobre los puntos)
+            # Para cada cultivo, construir X y predecir
             for crop_id in FINAL_CROPS:
                 col_onehot = f"crop_name_{CROP_DICT_EN[crop_id]}"
                 X = np.zeros((n, len(feats)), dtype=np.float32)
@@ -122,7 +114,6 @@ def precalcular():
                         X[:, j] = 1.0
                 iai = np.clip(modelo.predict(X), 0, 1)
 
-                # Acumular filas (formato largo)
                 filas.append(pl.DataFrame({
                     "lon": lon,
                     "lat": lat,
@@ -141,8 +132,9 @@ def precalcular():
     resultado.write_parquet(RUTA_SALIDA)
     print(f"\n[OK] Guardado en {RUTA_SALIDA}")
     print(f"     Filas: {resultado.height:,}")
-    print(f"     ({resultado['lon'].n_unique():,} puntos × "
-          f"{len(FINAL_CROPS)} cultivos × 3 escenarios)")
+    print(f"     ({resultado['lon'].n_unique():,} puntos x "
+          f"{len(FINAL_CROPS)} cultivos x {len(escenarios)} escenarios)")
+    print(f"     Escenarios: {list(escenarios.keys())}")
 
 
 if __name__ == "__main__":
