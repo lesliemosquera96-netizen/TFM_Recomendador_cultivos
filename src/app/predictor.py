@@ -15,10 +15,15 @@ import os
 import json
 import joblib
 import numpy as np
+import warnings
+warnings.filterwarnings("ignore", message="X does not have valid feature names")
 
 # ─── Rutas (ajusta a tu estructura) ───
-MODELS_DIR = os.path.join(os.path.dirname(__file__), "..", "models")
-LGB_DIR = os.path.join(MODELS_DIR, "lightgbm_final_v3")
+
+# El predictor está en src/app/, los modelos en TFM/models/ (subir 2 niveles)
+BASE_DIR = os.path.dirname(__file__)
+MODELS_DIR = os.path.join(BASE_DIR, "..", "..", "models")
+LGB_DIR = os.path.join(MODELS_DIR, "lightgbm_final")
 
 # ─── Orden EXACTO de las variables del clustering (del notebook 05) ───
 VARS_CLUSTER = [
@@ -76,7 +81,8 @@ class PredictorCultivos:
         Devuelve el número de cluster (0-4).
         """
         x = np.array([[datos[v] for v in VARS_CLUSTER]], dtype=np.float64)
-        x_sc = self.scaler.transform(x)
+        self.kmeans.cluster_centers_ = self.kmeans.cluster_centers_.astype(np.float64)
+        x_sc = self.scaler.transform(x).astype(np.float64)
         return int(self.kmeans.predict(x_sc)[0])
 
     # ──────────────────────────────────────────────────────────────
@@ -109,27 +115,26 @@ class PredictorCultivos:
         return resultados
 
     # ──────────────────────────────────────────────────────────────
-    #  Predicción completa: presente y futuro (por año) para un punto
+    #  Predicción completa: presente y futuro para un punto
     # ──────────────────────────────────────────────────────────────
-    def predecir_punto(self, punto: dict) -> dict:
+    def predecir_punto(self, punto: dict, promediar_futuro=True) -> dict:
         """
+        punto: dict con TODAS las variables del punto:
+          - Suelo: ph1to1h2o_r, awc_r, profundidad_efectiva_cm, claytotal_r,
+                   dbthirdbar_r, sandtotal_r, silttotal_r
+          - Clima presente: tmax, tmin, ppt, vpdmean
+          - Clima futuro: tmax_245_2030, tmin_245_2030, ppt_245_2030, ... etc.
+            (para cada escenario 245/585 y año 2030/2040)
+
         Devuelve un dict con:
           - cluster, etiqueta
-          - iai: {momento: {crop_id: iai}} donde momento es
-                 "2025", "2030-245", "2040-245", "2030-585", "2040-585"
-          - clima: {momento: {tmax, tmin, ppt}} para los mismos momentos
+          - iai_presente: {crop_id: iai}
+          - iai_futuro: {escenario: {crop_id: iai}}
         """
-        # Verificar variables del clustering
-        faltantes = [v for v in VARS_CLUSTER
-                     if punto.get(v) is None or
-                     (isinstance(punto.get(v), float) and np.isnan(punto.get(v)))]
-        if faltantes:
-            return {"error": f"Faltan datos para predecir: {', '.join(faltantes)}"}
-
         # 1. Asignar cluster con las variables del PRESENTE
         cluster = self.asignar_cluster(punto)
 
-        # 2. Suelo (común a todos los momentos)
+        # 2. Variables de suelo (comunes a presente y futuro)
         suelo = {
             "ph1to1h2o_r": punto["ph1to1h2o_r"],
             "awc_r": punto["awc_r"],
@@ -140,30 +145,36 @@ class PredictorCultivos:
             "silttotal_r": punto["silttotal_r"],
         }
 
-        iai = {}
-        clima = {}
+        # 3. IAI presente
+        clima_pres = {"tmax": punto["tmax"], "tmin": punto["tmin"], "ppt": punto["ppt"]}
+        iai_presente = self._predecir_iai(cluster, {**clima_pres, **suelo})
 
-        # 3. Presente (2025)
-        clima["2025"] = {"tmax": punto["tmax"], "tmin": punto["tmin"], "ppt": punto["ppt"]}
-        iai["2025"] = self._predecir_iai(cluster, {**clima["2025"], **suelo})
-
-        # 4. Futuro por año y escenario
+        # 4. IAI futuro por escenario
+        iai_futuro = {}
         for esc in ["245", "585"]:
-            for anio in [2030, 2040]:
-                cl = {
-                    "tmax": punto[f"tmax_{esc}_{anio}"],
-                    "tmin": punto[f"tmin_{esc}_{anio}"],
-                    "ppt": punto[f"pr_{esc}_{anio}"],
-                }
-                clave = f"{anio}-{esc}"
-                clima[clave] = cl
-                iai[clave] = self._predecir_iai(cluster, {**cl, **suelo})
+            if promediar_futuro:
+                # Promediar 2030 y 2040
+                tmax = np.mean([punto[f"tmax_{esc}_2030"], punto[f"tmax_{esc}_2040"]])
+                tmin = np.mean([punto[f"tmin_{esc}_2030"], punto[f"tmin_{esc}_2040"]])
+                ppt = np.mean([punto[f"pr_{esc}_2030"], punto[f"pr_{esc}_2040"]])
+                clima_fut = {"tmax": tmax, "tmin": tmin, "ppt": ppt}
+                iai_futuro[esc] = self._predecir_iai(cluster, {**clima_fut, **suelo})
+            else:
+                # Por año
+                for anio in [2030, 2040]:
+                    clima_fut = {
+                        "tmax": punto[f"tmax_{esc}_{anio}"],
+                        "tmin": punto[f"tmin_{esc}_{anio}"],
+                        "ppt": punto[f"pr_{esc}_{anio}"],
+                    }
+                    iai_futuro[f"{esc}_{anio}"] = self._predecir_iai(
+                        cluster, {**clima_fut, **suelo})
 
         return {
             "cluster": cluster,
             "etiqueta": ETIQUETAS_CLUSTER[cluster],
-            "iai": iai,
-            "clima": clima,
+            "iai_presente": iai_presente,
+            "iai_futuro": iai_futuro,
         }
 
     # ──────────────────────────────────────────────────────────────
@@ -186,7 +197,7 @@ if __name__ == "__main__":
 
     # Cargar la base y probar con un punto
     base = pl.read_parquet(
-        os.path.join(os.path.dirname(__file__), "..", "Data", "base_california_app.parquet"))
+        os.path.join(os.path.dirname(__file__), "..", "..", "Data", "base_california_app.parquet"))
     completos = base.filter(pl.col("datos_completos") == True)
     punto = completos.row(0, named=True)
 
