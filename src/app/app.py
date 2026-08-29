@@ -307,8 +307,8 @@ with tab2:
     e3.metric("Puntos evaluados", f"{len(datos_mapa):,}")
 
     if len(datos_mapa) == 0:
-    st.warning("No hay datos para esta combinación de cultivo y escenario.")
-    st.stop()
+        st.warning("No hay datos para esta combinación de cultivo y escenario.")
+        st.stop()
 
     colores = datos_mapa["iai"].apply(color_iai)
     datos_mapa["r"] = colores.apply(lambda c: c[0])
