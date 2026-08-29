@@ -306,8 +306,14 @@ with tab2:
     e2.metric("Zonas muy aptas (>0.7)", f"{(datos_mapa['iai']>0.7).mean()*100:.0f}%")
     e3.metric("Puntos evaluados", f"{len(datos_mapa):,}")
 
-    colores_rgb = datos_mapa["iai"].apply(color_iai)
-    datos_mapa[["r", "g", "b"]] = pd.DataFrame(colores_rgb.tolist(), index=datos_mapa.index)
+    if len(datos_mapa) == 0:
+    st.warning("No hay datos para esta combinación de cultivo y escenario.")
+    st.stop()
+
+    colores = datos_mapa["iai"].apply(color_iai)
+    datos_mapa["r"] = colores.apply(lambda c: c[0])
+    datos_mapa["g"] = colores.apply(lambda c: c[1])
+    datos_mapa["b"] = colores.apply(lambda c: c[2])
 
     capa = pdk.Layer(
         "ScatterplotLayer", data=datos_mapa,
