@@ -306,8 +306,8 @@ with tab2:
     e2.metric("Zonas muy aptas (>0.7)", f"{(datos_mapa['iai']>0.7).mean()*100:.0f}%")
     e3.metric("Puntos evaluados", f"{len(datos_mapa):,}")
 
-   colores_rgb = datos_mapa["iai"].apply(color_iai)
-   datos_mapa[["r", "g", "b"]] = pd.DataFrame(colores_rgb.tolist(), index=datos_mapa.index)
+    colores_rgb = datos_mapa["iai"].apply(color_iai)
+    datos_mapa[["r", "g", "b"]] = pd.DataFrame(colores_rgb.tolist(), index=datos_mapa.index)
 
     capa = pdk.Layer(
         "ScatterplotLayer", data=datos_mapa,
