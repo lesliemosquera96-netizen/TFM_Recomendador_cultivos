@@ -75,8 +75,9 @@ st.markdown(f"""
     div[data-testid="collapsedControl"] {{ display: none; }}
 
     /* Cabecera */
-    .cab-titulo {{ font-size: 28px; font-weight: 700; color: {COLOR_PRIMARIO}; line-height: 1.1; }}
-    .cab-desc  {{ font-size: 15px; color: #5F7A5F; margin-top: 5px; }}
+    .cab-titulo {{ font-size: 28px; font-weight: 700; color: {COLOR_PRIMARIO};
+                   line-height: 1.3; padding: 2px 0; }}
+    .cab-desc  {{ font-size: 15px; color: #5F7A5F; margin-top: 4px; line-height: 1.4; }}
 
     /* Pestañas en verde oscuro, sin emojis */
     .stTabs [data-baseweb="tab-list"] {{
