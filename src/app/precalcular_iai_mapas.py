@@ -72,6 +72,8 @@ def precalcular():
             "tmax": "tmax_585_2040", "tmin": "tmin_585_2040", "ppt": "pr_585_2040",
         },
     }
+    }
+    }
 
     # Variables de suelo (comunes a todos los escenarios)
     vars_suelo = ["ph1to1h2o_r", "awc_r", "profundidad_efectiva_cm",
