@@ -68,16 +68,16 @@ st.set_page_config(
 st.markdown(f"""
 <style>
     .stApp {{ background-color: {COLOR_FONDO}; }}
-    .block-container {{ padding-top: 1.4rem; max-width: 1250px; }}
+    .block-container {{ padding-top: 3rem; max-width: 1250px; }}
 
     /* Ocultar la barra lateral por completo */
     section[data-testid="stSidebar"] {{ display: none; }}
     div[data-testid="collapsedControl"] {{ display: none; }}
 
     /* Cabecera */
-    .cab-titulo {{ font-size: 28px; font-weight: 700; color: {COLOR_PRIMARIO};
-                   line-height: 1.3; padding: 2px 0; }}
-    .cab-desc  {{ font-size: 15px; color: #5F7A5F; margin-top: 4px; line-height: 1.4; }}
+    .cab-titulo {{ font-size: 27px; font-weight: 700; color: {COLOR_PRIMARIO};
+                   line-height: 1.6; padding-top: 6px; overflow: visible; }}
+    .cab-desc  {{ font-size: 15px; color: #5F7A5F; margin-top: 2px; line-height: 1.5; }}
 
     /* Pestañas en verde oscuro, sin emojis */
     .stTabs [data-baseweb="tab-list"] {{
@@ -183,9 +183,9 @@ _b64 = logo_b64()
 _logo_img = (f"<img src='data:image/png;base64,{_b64}' style='height:74px;'>"
              if _b64 else "")
 st.markdown(f"""
-<div style="display:flex; align-items:center; gap:16px; margin:4px 0 20px 0;">
+<div style="display:flex; align-items:center; gap:16px; margin:10px 0 20px 0; overflow:visible;">
     {_logo_img}
-    <div>
+    <div style="overflow:visible;">
         <div class="cab-titulo">Recomendador de cultivos</div>
         <div class="cab-desc">Descubre qué cultivos se adaptan mejor a tu parcela en
             California, hoy y ante el cambio climático.</div>
