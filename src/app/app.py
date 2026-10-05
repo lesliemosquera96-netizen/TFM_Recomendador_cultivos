@@ -44,7 +44,8 @@ BASE_DIR = os.path.dirname(__file__)
 PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, "..", ".."))
 RUTA_BASE = os.path.join(PROJECT_ROOT, "Data", "base_california_app.parquet")
 RUTA_IAI_MAPAS = os.path.join(PROJECT_ROOT, "Data", "iai_mapas_california.parquet")
-LOGO_PATH = os.path.join(BASE_DIR, "logo.png")
+LOGO_SVG = os.path.join(BASE_DIR, "logo.svg")
+LOGO_PNG = os.path.join(BASE_DIR, "logo.png")
 
 # ─── Paleta ───
 COLOR_FONDO = "#F6F4EC"      # crema suave
@@ -124,6 +125,7 @@ def en_california(lon, lat):
 # ══════════════════════════════════════════════════════════════════
 st.set_page_config(
     page_title="Recomendador de cultivos · California",
+    page_icon=LOGO_PNG if os.path.exists(LOGO_PNG) else None,
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -161,7 +163,19 @@ st.markdown(f"""
     .hero::before {{ width: 320px; height: 320px; right: -80px; top: -140px; }}
     .hero::after  {{ width: 200px; height: 200px; right: 140px; bottom: -120px;
                      background: rgba(242,179,61,0.18); }}
-    .hero-fila {{ display: flex; align-items: center; gap: 18px; position: relative; z-index: 1; }}
+    .hero-fila {{ display: flex; align-items: center; gap: 22px; position: relative; z-index: 1; }}
+    /* Logo sin recuadro: un halo claro detrás para que no se pierda sobre el verde */
+    .hero-logo {{
+        flex-shrink: 0; width: 124px; height: 124px;
+        display: flex; align-items: center; justify-content: center;
+        background: radial-gradient(circle, rgba(255,255,255,0.55) 0%,
+                                    rgba(255,255,255,0.18) 48%, rgba(255,255,255,0) 70%);
+    }}
+    .hero-logo img {{
+        max-width: 112px; max-height: 112px; object-fit: contain;
+        filter: drop-shadow(0 0 1.5px rgba(255,255,255,0.9))
+                drop-shadow(0 4px 10px rgba(0,0,0,0.25));
+    }}
     .hero-titulo {{ font-size: 34px; font-weight: 800; line-height: 1.15; color: white; }}
     .hero-desc {{ font-size: 16px; opacity: 0.92; margin-top: 6px; max-width: 640px; color: white; }}
     .hero-pasos {{ display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap;
@@ -300,6 +314,8 @@ st.markdown(f"""
 
     @media (max-width: 700px) {{
         .hero-titulo {{ font-size: 26px; }}
+        .hero-logo {{ width: 88px; height: 88px; }}
+        .hero-logo img {{ max-width: 80px; max-height: 80px; }}
         .cond-grid {{ grid-template-columns: repeat(2, 1fr); }}
     }}
 </style>
@@ -351,13 +367,32 @@ def _limpiar(html):
     return "\n".join(l.strip() for l in html.splitlines() if l.strip())
 
 
+@st.cache_data(show_spinner=False)
 def logo_b64():
-    """Devuelve el logo en base64 si existe junto a app.py; si no, None."""
-    try:
-        with open(LOGO_PATH, "rb") as f:
-            return base64.b64encode(f.read()).decode()
-    except Exception:
-        return None
+    """Devuelve (mime, base64) del logo que está junto a app.py.
+
+    Se usa primero logo.png. Si el PNG tiene márgenes transparentes, se
+    recortan para que el logo ocupe todo el espacio disponible en la cabecera.
+    Si no hay logo, devuelve None.
+    """
+    if os.path.exists(LOGO_PNG):
+        try:
+            import io
+            from PIL import Image
+            img = Image.open(LOGO_PNG).convert("RGBA")
+            caja = img.getchannel("A").getbbox()   # zona con contenido visible
+            if caja:
+                img = img.crop(caja)
+            buf = io.BytesIO()
+            img.save(buf, format="PNG")
+            return "image/png", base64.b64encode(buf.getvalue()).decode()
+        except Exception:
+            with open(LOGO_PNG, "rb") as f:
+                return "image/png", base64.b64encode(f.read()).decode()
+    if os.path.exists(LOGO_SVG):
+        with open(LOGO_SVG, "rb") as f:
+            return "image/svg+xml", base64.b64encode(f.read()).decode()
+    return None
 
 
 def punto_mas_cercano(lon, lat):
@@ -479,10 +514,9 @@ ICONO_HOJA = ("<svg width='26' height='26' viewBox='0 0 24 24' fill='none' strok
 # ══════════════════════════════════════════════════════════════════
 #  CABECERA
 # ══════════════════════════════════════════════════════════════════
-_b64 = logo_b64()
-_logo_img = (f"<img src='data:image/png;base64,{_b64}' "
-             f"style='height:70px; background:white; border-radius:16px; padding:6px;'>"
-             if _b64 else "")
+_logo = logo_b64()
+_logo_img = (f"<div class='hero-logo'><img src='data:{_logo[0]};base64,{_logo[1]}' "
+             f"alt='Logo'></div>" if _logo else "")
 st.markdown(_limpiar(f"""
 <div class="hero">
   <div class="hero-fila">
