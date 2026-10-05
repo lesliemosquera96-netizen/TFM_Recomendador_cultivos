@@ -166,13 +166,13 @@ st.markdown(f"""
     .hero-fila {{ display: flex; align-items: center; gap: 22px; position: relative; z-index: 1; }}
     /* Logo sin recuadro: un halo claro detrás para que no se pierda sobre el verde */
     .hero-logo {{
-        flex-shrink: 0; width: 124px; height: 124px;
+        flex-shrink: 0; width: 170px; height: 170px; margin: -18px 0 -18px -12px;
         display: flex; align-items: center; justify-content: center;
         background: radial-gradient(circle, rgba(255,255,255,0.55) 0%,
                                     rgba(255,255,255,0.18) 48%, rgba(255,255,255,0) 70%);
     }}
     .hero-logo img {{
-        max-width: 112px; max-height: 112px; object-fit: contain;
+        width: 150px; height: 150px; object-fit: contain;
         filter: drop-shadow(0 0 1.5px rgba(255,255,255,0.9))
                 drop-shadow(0 4px 10px rgba(0,0,0,0.25));
     }}
@@ -314,8 +314,8 @@ st.markdown(f"""
 
     @media (max-width: 700px) {{
         .hero-titulo {{ font-size: 26px; }}
-        .hero-logo {{ width: 88px; height: 88px; }}
-        .hero-logo img {{ max-width: 80px; max-height: 80px; }}
+        .hero-logo {{ width: 104px; height: 104px; margin: 0; }}
+        .hero-logo img {{ width: 92px; height: 92px; }}
         .cond-grid {{ grid-template-columns: repeat(2, 1fr); }}
     }}
 </style>
@@ -380,7 +380,10 @@ def logo_b64():
             import io
             from PIL import Image
             img = Image.open(LOGO_PNG).convert("RGBA")
-            caja = img.getchannel("A").getbbox()   # zona con contenido visible
+            # Zona con contenido visible. Se ignoran píxeles casi transparentes
+            # (alfa < 25), que a veces quedan como "sombra" alrededor del logo.
+            alfa = img.getchannel("A").point(lambda a: 255 if a >= 25 else 0)
+            caja = alfa.getbbox()
             if caja:
                 img = img.crop(caja)
             buf = io.BytesIO()
